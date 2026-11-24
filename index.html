@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>P-mag Configurator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#1f5fbf">
 <style>
   :root {
     --bg: #f4f5f7; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
@@ -79,8 +82,16 @@
 <body>
 
 <header>
-  <h1>P-mag Configurator</h1>
-  <p>Read and set E-MAG / P-MAG ignition timing over an RS-232 serial cable.</p>
+  <div class="row" style="justify-content:space-between; align-items:flex-start">
+    <div>
+      <h1>P-mag Configurator</h1>
+      <p>Read and set E-MAG / P-MAG ignition timing over an RS-232 serial cable.</p>
+    </div>
+    <div class="row">
+      <span id="offlineState" class="hint" style="margin:0" hidden>✓ Works offline</span>
+      <button id="btnInstall" hidden>Install app</button>
+    </div>
+  </div>
 </header>
 
 <div id="unsupported" class="banner warn" hidden>
@@ -677,6 +688,34 @@ function init() {
 
   renderLog();
   updatePreview();
+  setupOffline();
+}
+
+// ---------------------------------------------------------------------------
+// Offline use and "Install app" (needs https or localhost; skipped for files)
+// ---------------------------------------------------------------------------
+function setupOffline() {
+  if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
+
+  navigator.serviceWorker.register('sw.js')
+    .then(() => navigator.serviceWorker.ready)
+    .then(() => { $('offlineState').hidden = false; })
+    .catch(e => logActivity('---', `Offline mode unavailable: ${e.message}`));
+
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', ev => {
+    ev.preventDefault();
+    installPrompt = ev;
+    $('btnInstall').hidden = false;
+  });
+  $('btnInstall').onclick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    $('btnInstall').hidden = true;
+  };
+  window.addEventListener('appinstalled', () => { $('btnInstall').hidden = true; });
 }
 
 init();

@@ -25,6 +25,19 @@ The log is kept in your browser. Use **Download CSV** to save a copy.
 
 Safari, Firefox, iPad and iPhone are not supported: they can't open serial ports.
 
+### Use it with no internet
+
+Open the page once while online. After that it opens with no internet, at
+the same address, so it works in the hangar or at the airplane. Talking to the
+P-mag never needs internet.
+
+To give it a desktop icon in its own window, click **Install app** at the top
+of the page, or the install icon at the right of Chrome's or Edge's
+address bar.
+
+When you're online, the page always loads the latest version, so updates
+reach you automatically.
+
 ## Wiring
 
 | E-MAG 6-pin connector | Signal |
