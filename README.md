@@ -11,7 +11,7 @@ reads them back to confirm, and keeps a log.
 ## Use it in your browser (no install)
 
 Open the page in **Chrome or Edge** on a Windows, Mac, Linux or ChromeOS
-computer: `https://<your-user>.github.io/<this-repo>/`
+computer: **https://dnickerson.github.io/P-mag/**
 
 1. Plug in your USB-to-serial adapter and connect it to the P-mag (see wiring below).
 2. Click **Connect to P-mag…** and pick the adapter's port.
