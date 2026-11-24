@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P-mag Configurator</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8;
+    --accent: #1f5fbf; --accent-text: #ffffff; --ok: #1d7a3e; --ok-bg: #e6f4ea;
+    --err: #b3261e; --err-bg: #fbe9e7; --warn: #8a5a00; --warn-bg: #fff4d6;
+    --code-bg: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #9aa3b2; --line: #2c3340;
+      --accent: #5b9cf5; --accent-text: #0b1220; --ok: #6fd18f; --ok-bg: #16301f;
+      --err: #ff8a80; --err-bg: #3a1a18; --warn: #f3c969; --warn-bg: #352a10;
+      --code-bg: #232a35;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header, main, footer { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header { padding-top: 28px; padding-bottom: 8px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 16px; padding-bottom: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .wide { grid-column: 1 / -1; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button {
+    font: inherit; padding: 8px 14px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button.danger { border-color: var(--err); color: var(--err); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  label { color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px; }
+  label.inline { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-size: 14px; color: var(--text); }
+  select, input[type=text] {
+    font: inherit; width: 100%; padding: 7px 9px; border-radius: 7px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+  }
+  .field { margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .status { margin: 12px 0 0; font-weight: 600; }
+  .status.on { color: var(--ok); }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .banner { max-width: 940px; margin: 12px auto 0; padding: 10px 14px; border-radius: 8px; }
+  .warn { background: var(--warn-bg); color: var(--warn); }
+  .msg { margin-top: 12px; padding: 9px 12px; border-radius: 7px; white-space: pre-line; }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); }
+  .msg.error { background: var(--err-bg); color: var(--err); }
+  .msg.info { background: var(--code-bg); color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; }
+  .settings td:first-child { color: var(--muted); }
+  .settings td.big { font-size: 20px; font-weight: 650; }
+  code, pre { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  .cmds { background: var(--code-bg); padding: 8px 10px; border-radius: 7px; margin-top: 10px; word-spacing: 0.6em; }
+  .logwrap { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+  .logwrap table { font-size: 13px; white-space: nowrap; }
+  pre#console { background: var(--code-bg); padding: 10px; border-radius: 7px; max-height: 260px; overflow: auto; font-size: 12.5px; margin: 10px 0 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  .empty { color: var(--muted); }
+  footer { color: var(--muted); font-size: 13px; padding-bottom: 32px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>P-mag Configurator</h1>
+  <p>Read and set E-MAG / P-MAG ignition timing over an RS-232 serial cable.</p>
+</header>
+
+<div id="unsupported" class="banner warn" hidden>
+  This browser can't open serial ports. Use Chrome or Edge on a Windows, Mac, Linux or ChromeOS computer.
+  Simulate mode still works for trying the page out.
+</div>
+
+<main>
+  <section class="card">
+    <h2>1. Connect</h2>
+    <div class="row">
+      <button id="btnConnect" class="primary">Connect to P-mag…</button>
+      <button id="btnDisconnect" hidden>Disconnect</button>
+      <label class="inline"><input type="checkbox" id="chkSim"> Simulate (no hardware)</label>
+    </div>
+    <p class="status" id="connStatus">Not connected</p>
+    <p class="hint">9600 baud, 8 data bits, no parity, 1 stop bit. The engine must be stopped.</p>
+    <div class="field" style="margin-top:14px">
+      <label for="notes">Notes (saved with each log entry)</label>
+      <input type="text" id="notes" placeholder="e.g. Left mag, annual inspection">
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Current configuration</h2>
+    <button id="btnRead" disabled>Read from P-mag</button>
+    <table class="settings" style="margin-top:12px">
+      <tbody>
+        <tr><td>Firmware version</td><td id="curFw" class="empty">—</td></tr>
+        <tr><td>Takeoff / high power timing</td><td id="curTiming" class="empty">—</td></tr>
+        <tr><td>Low power / cruise max advance</td><td id="curMaxAdv" class="empty">—</td></tr>
+        <tr><td>RPM limiter</td><td id="curRpm" class="empty">—</td></tr>
+      </tbody>
+    </table>
+    <div id="readMsg"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>3. New configuration</h2>
+    <div class="field">
+      <label for="engine">Engine</label>
+      <select id="engine"><option value="">Choose an engine…</option></select>
+    </div>
+    <div id="customFields" class="grid3" hidden>
+      <div class="field"><label for="cTiming">Takeoff / high power timing (°)</label><select id="cTiming"></select></div>
+      <div class="field"><label for="cMaxAdv">Cruise max advance (°)</label><select id="cMaxAdv"></select></div>
+      <div class="field"><label for="cRpm">RPM limiter</label><select id="cRpm"></select></div>
+    </div>
+    <div id="preview" hidden>
+      <table>
+        <thead><tr><th>Setting</th><th class="num">Value</th><th class="num">Stored in P-mag</th></tr></thead>
+        <tbody>
+          <tr><td>Takeoff / high power timing</td><td class="num" id="pTiming"></td><td class="num" id="pShift"></td></tr>
+          <tr><td>Low power / cruise max advance</td><td class="num" id="pMaxAdv"></td><td class="num" id="pMaxSet"></td></tr>
+          <tr><td>RPM limiter</td><td class="num" id="pRpm"></td><td class="num" id="pBlocks"></td></tr>
+        </tbody>
+      </table>
+      <div class="cmds">Commands: <code id="pCmds"></code></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnWrite" class="primary" disabled>Write to P-mag</button>
+    </div>
+    <div id="writeMsg"></div>
+  </section>
+
+  <section class="card wide">
+    <div class="row" style="justify-content:space-between; margin-bottom:10px">
+      <h2 style="margin:0">Log</h2>
+      <div class="row">
+        <button id="btnCsv">Download CSV</button>
+        <button id="btnClearLog" class="danger">Clear log</button>
+      </div>
+    </div>
+    <div class="logwrap">
+      <table>
+        <thead><tr id="logHead"></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="logNote">The log is kept in this browser only. Download the CSV to keep a copy.</p>
+  </section>
+
+  <section class="card wide">
+    <details>
+      <summary>Serial activity</summary>
+      <pre id="console"></pre>
+    </details>
+  </section>
+</main>
+
+<footer>
+  Not affiliated with or endorsed by E-MAG Ignitions. Check every setting against your engine and
+  P-mag documentation before flight. Use at your own risk.
+</footer>
+
+<script>
+'use strict';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+const TIMING_BASE = 26.6;     // takeoff timing = AdvShft + 26.6
+const MAX_ADV_OFFSET = 1.4;   // the P-mag advances 1.4 deg past its MaxAdv setting
+const RPM_BLOCK = 256;        // RPM limit is stored in 256-rpm blocks
+const CUSTOM_ENGINE = 10;
+const SERIAL_OPTIONS = { baudRate: 9600, dataBits: 8, parity: 'none', stopBits: 1 };
+const REPLY_TIMEOUT_MS = 1000;
+
+function round1(x) { return Math.round(x * 10) / 10; }
+function steps(start, step, count) {
+  return Array.from({ length: count }, (_, i) => round1(start + step * i));
+}
+
+// Engine numbers match the original spreadsheet and the Python script.
+const ENGINES = [
+  { n: 2,  name: 'Low Compression O-320 150 HP - Break-in (Parallel Valve)',                 timing: 25.2, maxAdv: 25.2, rpm: 3072 },
+  { n: 3,  name: 'Low Compression O-320 150 HP (Parallel Valve)',                            timing: 25.2, maxAdv: 32.2, rpm: 3072 },
+  { n: 4,  name: 'Standard Compression (I)O-320 160 HP - Break-in (Parallel Valve)',         timing: 25.2, maxAdv: 25.2, rpm: 3072 },
+  { n: 5,  name: 'Standard Compression (I)O-320 160 HP (Parallel Valve)',                    timing: 25.2, maxAdv: 32.2, rpm: 3072 },
+  { n: 6,  name: 'Standard Compression (I)O-360 180 HP - Break-in (Parallel Valve)',         timing: 25.2, maxAdv: 25.2, rpm: 3072 },
+  { n: 7,  name: 'Standard Compression (I)O-360 180 HP (Parallel Valve)',                    timing: 25.2, maxAdv: 32.2, rpm: 3072 },
+  { n: 8,  name: 'Standard Compression (I)O-360/390 200 to 210 HP - Break-in (Angle Valve)', timing: 19.6, maxAdv: 21.0, rpm: 3072 },
+  { n: 9,  name: 'Standard Compression (I)O-360/390 200 to 210 HP (Angle Valve)',            timing: 21.0, maxAdv: 25.2, rpm: 3072 },
+  { n: 10, name: 'Create a Custom Configuration' },
+  // The spreadsheet lists AdvShft 4.2 for the defaults (= 30.8 deg) but 26.6 here. Kept as-is.
+  { n: 11, name: 'P-mag Default Settings',                                                   timing: 26.6, maxAdv: 39.2, rpm: 3328 },
+];
+
+const TIMING_OPTIONS = steps(15.4, 1.4, 17);   // 15.4 .. 37.8
+const MAX_ADV_OPTIONS = steps(15.4, 1.4, 23);  // 15.4 .. 46.2
+const RPM_OPTIONS = [2816, 3072, 3328, 3584];
+const CUSTOM_DEFAULTS = { timing: 23.8, maxAdv: 28.0, rpm: 3072 };
+
+// ---------------------------------------------------------------------------
+// Configuration math
+// ---------------------------------------------------------------------------
+function makeConfig(timing, maxAdv, rpm) {
+  return {
+    timing, maxAdv, rpm,
+    advShift: round1(timing - TIMING_BASE),
+    maxAdvSetting: round1(maxAdv - MAX_ADV_OFFSET),
+    rpmBlocks: Math.round(rpm / RPM_BLOCK),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Wire encoding.
+// Uses "tenths of a degree, raw rpm" (e.g. /C-70 /N280 /M3072 /W), the format
+// in the original spreadsheet's notes. Some firmware documentation describes
+// /C and /N in 1.406-degree units and /M in x256 blocks instead. If your
+// firmware differs, change only these functions.
+// ---------------------------------------------------------------------------
+const encodeAdvShift = deg => `/C${Math.round(deg * 10)}`;
+const encodeMaxAdv = deg => `/N${Math.round(deg * 10)}`;
+const encodeRpmLimit = rpm => `/M${Math.round(rpm)}`;
+const decodeTenths = text => parseInt(text, 10) / 10;
+// Older code read /m as 256-rpm blocks ("12" = 3072). Accept either.
+const decodeRpmLimit = text => { const n = parseInt(text, 10); return n < 100 ? n * RPM_BLOCK : n; };
+
+function commandsFor(cfg) {
+  return [encodeAdvShift(cfg.advShift), encodeMaxAdv(cfg.maxAdvSetting), encodeRpmLimit(cfg.rpm), '/W'];
+}
+
+function digits(text, allowMinus) {
+  const keep = allowMinus ? /[-0-9]/ : /[0-9]/;
+  const out = [...text].filter(c => keep.test(c)).join('');
+  if (!out || out === '-') throw new Error(`Unexpected reply from P-mag: "${text}"`);
+  return out;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ---------------------------------------------------------------------------
+// Serial links
+// ---------------------------------------------------------------------------
+class SerialLink {
+  constructor(port) {
+    this.port = port;
+    this.sim = false;
+    this.buf = '';
+    this.waiters = [];
+    this.decoder = new TextDecoder();
+    this.encoder = new TextEncoder();
+    const info = port.getInfo ? port.getInfo() : {};
+    const hex = v => v.toString(16).padStart(4, '0');
+    this.label = info.usbVendorId ? `USB ${hex(info.usbVendorId)}:${hex(info.usbProductId)}` : 'Serial port';
+  }
+
+  async open() {
+    await this.port.open(SERIAL_OPTIONS);
+    this.reader = this.port.readable.getReader();
+    this.writer = this.port.writable.getWriter();
+    this.readLoop();
+  }
+
+  async readLoop() {
+    try {
+      while (true) {
+        const { value, done } = await this.reader.read();
+        if (done) break;
+        this.buf += this.decoder.decode(value, { stream: true });
+        const w = this.waiters; this.waiters = []; w.forEach(f => f());
+      }
+    } catch (e) {
+      logActivity('ERR', e.message);
+    }
+  }
+
+  async readLine(timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (true) {
+      const i = this.buf.indexOf('\r');
+      if (i >= 0) {
+        const line = this.buf.slice(0, i).replace(/\n/g, '').trim();
+        this.buf = this.buf.slice(i + 1);
+        logActivity('RX', line);
+        return line;
+      }
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return null;
+      await new Promise(res => {
+        const t = setTimeout(res, remaining);
+        this.waiters.push(() => { clearTimeout(t); res(); });
+      });
+    }
+  }
+
+  flushInput() { this.buf = ''; }
+
+  async send(cmd) {
+    logActivity('TX', cmd);
+    await this.writer.write(this.encoder.encode(cmd + '\r'));
+  }
+
+  async query(cmd) {
+    this.flushInput();
+    await this.send(cmd);
+    for (let i = 0; i < 4; i++) {
+      const line = await this.readLine(REPLY_TIMEOUT_MS);
+      if (line === null) break;
+      if (line === '' || line === cmd) continue;   // skip blank lines and the echo
+      return line;
+    }
+    throw new Error(`No response to ${cmd}. Check the cable, port and that the P-mag has power.`);
+  }
+
+  async wake() {
+    await this.send('/*');
+    await sleep(1000);
+    this.flushInput();
+  }
+
+  async close() {
+    try { await this.reader.cancel(); } catch (e) {}
+    try { this.reader.releaseLock(); } catch (e) {}
+    try { this.writer.releaseLock(); } catch (e) {}
+    try { await this.port.close(); } catch (e) {}
+  }
+}
+
+// Answers like a P-mag with the original spreadsheet's placeholder values.
+class SimLink {
+  constructor() {
+    this.sim = true;
+    this.label = 'Simulator';
+    this.state = { '/x': '0000', '/?': 'Unknown', '/c': '-14', '/n': '252', '/m': '12' };
+  }
+  async open() {}
+  flushInput() {}
+  async send(cmd) {
+    logActivity('TX', cmd);
+    const m = /^\/([CNM])(-?\d+)$/.exec(cmd);
+    if (m) this.state['/' + m[1].toLowerCase()] = m[2];
+  }
+  async query(cmd) {
+    await this.send(cmd);
+    const reply = this.state[cmd];
+    logActivity('RX', reply);
+    return reply;
+  }
+  async wake() { await this.send('/*'); }
+  async close() {}
+}
+
+// ---------------------------------------------------------------------------
+// P-mag operations
+// ---------------------------------------------------------------------------
+async function getRpm(link) { return parseInt(digits(await link.query('/x')), 10); }
+
+async function getFirmware(link) {
+  try {
+    const reply = await link.query('/?');
+    const fw = [...reply].filter(c => /[-0-9]/.test(c)).join('');
+    return fw || reply || 'Unknown';
+  } catch (e) {
+    return 'Unknown';
+  }
+}
+
+async function ensureStopped(link) {
+  const rpm = await getRpm(link);
+  if (rpm !== 0) throw new Error(`Engine must not be running! (P-mag reports ${rpm} rpm)`);
+}
+
+async function readSettings(link) {
+  const shift = decodeTenths(digits(await link.query('/c'), true));
+  const maxAdv = decodeTenths(digits(await link.query('/n')));
+  const rpm = decodeRpmLimit(digits(await link.query('/m')));
+  const firmware = await getFirmware(link);
+  return { firmware, config: makeConfig(round1(TIMING_BASE + shift), round1(maxAdv + MAX_ADV_OFFSET), rpm) };
+}
+
+// ---------------------------------------------------------------------------
+// Log (stored in this browser)
+// ---------------------------------------------------------------------------
+const LOG_KEY = 'pmag-configurator-log';
+const LOG_COLUMNS = ['Date & Time', 'Action', 'Port', 'Engine', 'Firmware Version',
+  'Takeoff/High Power Timing', 'ADVShft P-mag Setting', 'Low Power / Cruise Max Advance',
+  'MaxADV P-mag Setting', '# RPM Blocks', 'Max RPM', 'Notes'];
+
+// If the browser blocks storage (private windows, some locked-down setups),
+// keep the log in memory for this visit so a storage error never hides the
+// result of a read or write.
+let memoryLog = null;
+
+function loadLog() {
+  if (memoryLog) return memoryLog;
+  try { return JSON.parse(localStorage.getItem(LOG_KEY)) || []; } catch (e) { return []; }
+}
+function saveLog(rows) {
+  if (!memoryLog) {
+    try { localStorage.setItem(LOG_KEY, JSON.stringify(rows)); return; } catch (e) {
+      $('logNote').textContent = "This browser won't let the page save the log, so it only lasts until you close the page. Download the CSV to keep a copy.";
+    }
+  }
+  memoryLog = rows;
+}
+
+function addLog(action, engine, firmware, cfg) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const rows = loadLog();
+  rows.push([stamp, action, link ? link.label : '', engine, firmware,
+    cfg.timing.toFixed(1), cfg.advShift.toFixed(1), cfg.maxAdv.toFixed(1), cfg.maxAdvSetting.toFixed(1),
+    cfg.rpmBlocks, cfg.rpmBlocks * RPM_BLOCK, $('notes').value.trim()]);
+  saveLog(rows);
+  renderLog();
+}
+
+function renderLog() {
+  const rows = loadLog();
+  const body = $('logBody');
+  body.replaceChildren();
+  if (!rows.length) {
+    const tr = body.insertRow(); const td = tr.insertCell();
+    td.colSpan = LOG_COLUMNS.length; td.className = 'empty'; td.textContent = 'No entries yet.';
+    return;
+  }
+  for (const r of rows.slice().reverse()) {
+    const tr = body.insertRow();
+    r.forEach(v => { tr.insertCell().textContent = v; });
+  }
+}
+
+function downloadCsv() {
+  const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [LOG_COLUMNS, ...loadLog()].map(r => r.map(esc).join(','));
+  const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pmag_log.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------------------------------------------------------------------------
+// UI
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+let link = null;
+let busy = false;
+
+function logActivity(kind, text) {
+  const t = new Date().toLocaleTimeString();
+  const pre = $('console');
+  pre.textContent += `${t}  ${kind.padEnd(3)}  ${text}\n`;
+  pre.scrollTop = pre.scrollHeight;
+}
+
+function showMsg(id, kind, text) {
+  const el = $(id);
+  el.className = text ? `msg ${kind}` : '';
+  el.textContent = text || '';
+}
+
+function fmtDeg(x) { return `${x.toFixed(1)}°`; }
+function fmtSigned(x) { return `${x > 0 ? '+' : ''}${x.toFixed(1)}`; }
+
+function selectedConfig() {
+  const n = parseInt($('engine').value, 10);
+  if (!n) return null;
+  if (n === CUSTOM_ENGINE) {
+    return makeConfig(parseFloat($('cTiming').value), parseFloat($('cMaxAdv').value), parseInt($('cRpm').value, 10));
+  }
+  const e = ENGINES.find(x => x.n === n);
+  return makeConfig(e.timing, e.maxAdv, e.rpm);
+}
+
+function selectedEngineName() {
+  const n = parseInt($('engine').value, 10);
+  const e = ENGINES.find(x => x.n === n);
+  return e ? e.name : '';
+}
+
+function updatePreview() {
+  const n = parseInt($('engine').value, 10);
+  $('customFields').hidden = n !== CUSTOM_ENGINE;
+  const cfg = selectedConfig();
+  $('preview').hidden = !cfg;
+  if (cfg) {
+    $('pTiming').textContent = fmtDeg(cfg.timing);
+    $('pShift').textContent = `AdvShft ${fmtSigned(cfg.advShift)}`;
+    $('pMaxAdv').textContent = fmtDeg(cfg.maxAdv);
+    $('pMaxSet').textContent = `MaxAdv ${cfg.maxAdvSetting.toFixed(1)}`;
+    $('pRpm').textContent = `${cfg.rpm} rpm`;
+    $('pBlocks').textContent = `${cfg.rpmBlocks} × ${RPM_BLOCK}`;
+    $('pCmds').textContent = commandsFor(cfg).join('  ');
+  }
+  showMsg('writeMsg');
+  updateButtons();
+}
+
+function updateButtons() {
+  const connected = !!link;
+  $('btnConnect').hidden = connected;
+  $('btnDisconnect').hidden = !connected;
+  $('chkSim').disabled = connected;
+  $('btnConnect').disabled = busy || (!('serial' in navigator) && !$('chkSim').checked);
+  $('btnRead').disabled = !connected || busy;
+  $('btnWrite').disabled = !connected || busy || !selectedConfig();
+  const s = $('connStatus');
+  s.textContent = connected ? `Connected: ${link.label}` : 'Not connected';
+  s.classList.toggle('on', connected);
+}
+
+async function withBusy(fn) {
+  busy = true; updateButtons();
+  try { await fn(); } finally { busy = false; updateButtons(); }
+}
+
+async function connect() {
+  await withBusy(async () => {
+    try {
+      let l;
+      if ($('chkSim').checked) {
+        l = new SimLink();
+      } else {
+        const port = await navigator.serial.requestPort();
+        l = new SerialLink(port);
+      }
+      await l.open();
+      link = l;
+      logActivity('---', `Connected to ${l.label}`);
+    } catch (e) {
+      if (e.name !== 'NotFoundError') showMsg('readMsg', 'error', `Couldn't open the port: ${e.message}`);
+    }
+  });
+}
+
+async function disconnect() {
+  if (!link) return;
+  const l = link; link = null;
+  await l.close();
+  logActivity('---', 'Disconnected');
+  updateButtons();
+}
+
+function showCurrent(r) {
+  const set = (id, text) => { const el = $(id); el.textContent = text; el.classList.remove('empty'); };
+  set('curFw', r.firmware);
+  set('curTiming', `${fmtDeg(r.config.timing)}  (AdvShft ${fmtSigned(r.config.advShift)})`);
+  set('curMaxAdv', `${fmtDeg(r.config.maxAdv)}  (MaxAdv ${r.config.maxAdvSetting.toFixed(1)})`);
+  set('curRpm', `${r.config.rpm} rpm  (${r.config.rpmBlocks} × ${RPM_BLOCK})`);
+}
+
+async function readConfig() {
+  showMsg('readMsg');
+  await withBusy(async () => {
+    try {
+      await link.wake();
+      await ensureStopped(link);
+      const r = await readSettings(link);
+      showCurrent(r);
+      addLog('Read', 'N/A', r.firmware, r.config);
+      showMsg('readMsg', 'ok', `Read at ${new Date().toLocaleTimeString()}.`);
+    } catch (e) {
+      showMsg('readMsg', 'error', e.message);
+    }
+  });
+}
+
+async function writeConfig() {
+  const cfg = selectedConfig();
+  if (!cfg) return;
+  const name = selectedEngineName();
+  const cmds = commandsFor(cfg);
+  if (!link.sim) {
+    const ok = confirm(
+      `Write these settings to the P-mag?\n\n${name}\n\n` +
+      `Takeoff / high power timing: ${fmtDeg(cfg.timing)}\n` +
+      `Cruise max advance: ${fmtDeg(cfg.maxAdv)}\n` +
+      `RPM limiter: ${cfg.rpm} rpm\n\nCommands: ${cmds.join('  ')}`);
+    if (!ok) return;
+  }
+  showMsg('writeMsg');
+  await withBusy(async () => {
+    try {
+      await link.wake();
+      await ensureStopped(link);
+      const firmware = await getFirmware(link);
+      for (const c of cmds) {
+        await link.send(c);
+        await sleep(link.sim ? 0 : 300);
+        link.flushInput();          // discard the echo
+      }
+      const back = await readSettings(link);
+      showCurrent(back);
+      addLog('Write', name, firmware, cfg);
+      const match = Math.abs(back.config.timing - cfg.timing) < 0.05
+        && Math.abs(back.config.maxAdv - cfg.maxAdv) < 0.05
+        && back.config.rpm === cfg.rpm;
+      if (match) {
+        showMsg('writeMsg', 'ok', 'Written and verified. The read-back matches what was written.');
+      } else {
+        showMsg('writeMsg', 'error',
+          `Warning: the read-back does not match what was written.\n` +
+          `P-mag now reports ${fmtDeg(back.config.timing)} / ${fmtDeg(back.config.maxAdv)} / ${back.config.rpm} rpm.`);
+      }
+    } catch (e) {
+      showMsg('writeMsg', 'error', e.message);
+    }
+  });
+}
+
+function fillSelect(id, values, fmt, selected) {
+  const sel = $(id);
+  for (const v of values) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = fmt(v);
+    if (v === selected) o.selected = true;
+    sel.append(o);
+  }
+}
+
+function init() {
+  for (const e of ENGINES) {
+    const o = document.createElement('option');
+    o.value = e.n;
+    o.textContent = e.n === CUSTOM_ENGINE ? e.name : `${e.name}  —  ${e.timing.toFixed(1)}° / ${e.maxAdv.toFixed(1)}° / ${e.rpm}`;
+    $('engine').append(o);
+  }
+  fillSelect('cTiming', TIMING_OPTIONS, v => v.toFixed(1), CUSTOM_DEFAULTS.timing);
+  fillSelect('cMaxAdv', MAX_ADV_OPTIONS, v => v.toFixed(1), CUSTOM_DEFAULTS.maxAdv);
+  fillSelect('cRpm', RPM_OPTIONS, v => String(v), CUSTOM_DEFAULTS.rpm);
+
+  $('logHead').replaceChildren(...LOG_COLUMNS.map(c => { const th = document.createElement('th'); th.textContent = c; return th; }));
+
+  if (!('serial' in navigator)) {
+    $('unsupported').hidden = false;
+  } else {
+    navigator.serial.addEventListener('disconnect', ev => {
+      if (link && !link.sim && ev.target === link.port) {
+        link = null;
+        logActivity('---', 'Serial device unplugged');
+        updateButtons();
+      }
+    });
+  }
+
+  $('btnConnect').onclick = connect;
+  $('btnDisconnect').onclick = disconnect;
+  $('chkSim').onchange = updateButtons;
+  $('btnRead').onclick = readConfig;
+  $('btnWrite').onclick = writeConfig;
+  $('engine').onchange = updatePreview;
+  ['cTiming', 'cMaxAdv', 'cRpm'].forEach(id => { $(id).onchange = updatePreview; });
+  $('btnCsv').onclick = downloadCsv;
+  $('btnClearLog').onclick = () => {
+    if (confirm('Delete all log entries stored in this browser? Download the CSV first if you want a copy.')) {
+      saveLog([]); renderLog();
+    }
+  };
+
+  renderLog();
+  updatePreview();
+}
+
+init();
+</script>
+</body>
+</html>

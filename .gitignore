@@ -1,0 +1,22 @@
+# Original Excel workbook (macro-enabled; contains the original author's name)
+*.xlsm
+# Excel lock files
+~$*
+
+# Local logs written by pmag_configurator.py
+pmag_log.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / tool settings
+.claude/
+.vscode/
+.idea/
+
+# OS clutter
+Thumbs.db
+desktop.ini
+.DS_Store
